@@ -294,8 +294,8 @@ PyObject *  prune(const bpn::ndarray & xyz ,float voxel_size, const bpn::ndarray
     bool have_labels = n_labels>0;
     bool have_objects = n_objects>0;
     //---read the numpy arrays data---
-    const float * xyz_data = reinterpret_cast<float*>(xyz.get_data());
-    const uint8_t * rgb_data = reinterpret_cast<uint8_t*>(rgb.get_data());
+    const float * xyz_data = reinterpret_cast<float*>(xyz.get_data());          
+    const uint8_t * rgb_data = reinterpret_cast<uint8_t*>(rgb.get_data());      
     const uint8_t * label_data;
     if (have_labels)
         label_data = reinterpret_cast<uint8_t*>(labels.get_data());
@@ -385,26 +385,26 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
 {//compute the following geometric features (geof) features of a point cloud:
  //linearity planarity scattering verticality
     std::size_t n_ver = bp::len(xyz);                                                       // xyz의 길이
-    std::vector< std::vector< float > > geof(n_ver, std::vector< float >(4,0));             // geof 
+    std::vector< std::vector< float > > geof(n_ver, std::vector< float >(4,0));             // geof 4 x len(xyz) 만큼의 배열
     //--- read numpy array data---
     const uint32_t * target_data = reinterpret_cast<uint32_t*>(target.get_data());          // 
     const float * xyz_data = reinterpret_cast<float*>(xyz.get_data());
     std::size_t s_ver = 0;
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(static)       //지정된 스레드에 맞춰 스레드 생성
     for (std::size_t i_ver = 0; i_ver < n_ver; i_ver++)
     {//each point can be treated in parallell independently
         //--- compute 3d covariance matrix of neighborhood ---
-        ei::MatrixXf position(k_nn+1,3);                                                    // k_nn은 이웃한 점들을 포함하는 크기
-        std::size_t i_edg = k_nn * i_ver;
-        std::size_t ind_nei;
-        position(0,0) = xyz_data[3 * i_ver];
-        position(0,1) = xyz_data[3 * i_ver + 1];
-        position(0,2) = xyz_data[3 * i_ver + 2];
-        for (std::size_t i_nei = 0; i_nei < k_nn; i_nei++)
+        ei::MatrixXf position(k_nn+1,3);                        // 46 x 3 매트릭스 생성                                               // k_nn은 이웃한 점들을 포함하는 크기
+        std::size_t i_edg = k_nn * i_ver;                       // 45 * i_ver 개씩  
+        std::size_t ind_nei;                                    
+        position(0,0) = xyz_data[3 * i_ver];                    // x의 데이터 
+        position(0,1) = xyz_data[3 * i_ver + 1];                // y의 데이터 
+        position(0,2) = xyz_data[3 * i_ver + 2];                // z의 데이터 
+        for (std::size_t i_nei = 0; i_nei < k_nn; i_nei++)      // 
         {
                 //add the neighbors to the position matrix
-            ind_nei = target_data[i_edg];
-            position(i_nei+1,0) = xyz_data[3 * ind_nei];
+            ind_nei = target_data[i_edg];                       // 이웃한 점들의 위치 45 * i_ver 
+            position(i_nei+1,0) = xyz_data[3 * ind_nei];        
             position(i_nei+1,1) = xyz_data[3 * ind_nei + 1];
             position(i_nei+1,2) = xyz_data[3 * ind_nei + 2];
             i_edg++;

@@ -114,13 +114,16 @@ for folder in folders:
         #--- build the geometric feature file h5 file ---
         if os.path.isfile(fea_file) and not args.overwrite:
             print("    reading the existing feature file...")
+            # 특징들이 존재한다면 geof, xyz, rgb. graph_nn, labels 각 변수에 저장
             geof, xyz, rgb, graph_nn, labels = read_features(fea_file)
         else :
             print("    creating the feature file...")
             #--- read the data files and compute the labels---
             if args.dataset=='s3dis':
+                # data 파일에 있는 각 데이터를 각 변수에 저장한다.
                 xyz, rgb, labels, objects = read_s3dis_format(data_file)
-                if args.voxel_width > 0:
+                if args.voxel_width > 0: # 샘플링할 때의 voxel 사이즈
+                    # 복셀화하는 코드
                     xyz, rgb, labels, dump = libply_c.prune(xyz.astype('f4'), args.voxel_width, rgb.astype('uint8'), labels.astype('uint8'), np.zeros(1, dtype='uint8'), n_labels, 0)
             elif args.dataset=='sema3d':
                 label_file = data_folder + file_name + ".labels"
@@ -145,9 +148,12 @@ for folder in folders:
                 #if no rgb available simply set here rgb = [] and make sure to not use it later on
             start = timer()
             #---compute 10 nn graph-------
-            # k_nn_geof : number of neighbors for the geometric features
-            # k_nn_adj : adjacency structure for the minimal partition
+            # k_nn_geof : number of neighbors for the geometric features -> 45
+            # 기하학적 특징에 대한 이웃한 점들의 수
+            # k_nn_adj : adjacency structure for the minimal partition -> 10
+            # 최소 분할을 위한 인접한 구조
             graph_nn, target_fea = compute_graph_nn_2(xyz, args.k_nn_adj, args.k_nn_geof)
+            # target_fea : kd_tree로 구한 neighbors의 1차원 배열 값
             #---compute geometric features-------
             geof = libply_c.compute_geof(xyz, target_fea, args.k_nn_geof).astype('float32')
             end = timer()

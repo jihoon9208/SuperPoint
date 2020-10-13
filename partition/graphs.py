@@ -4,6 +4,7 @@
 #------------------------------------------------------------------------------
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
+# unsupervised 학습에 활용되는 알고리즘
 from scipy.spatial import Delaunay
 from numpy import linalg as LA
 import numpy.matlib
@@ -12,6 +13,10 @@ def compute_graph_nn(xyz, k_nn):
     """compute the knn graph"""
     num_ver = xyz.shape[0]
     graph = dict([("is_nn", True)])
+    # kd_tree 알고리즘을 사용
+    # K-Dimension Tree BST(Binary Search Tree)를 다차원 공간으로 확장
+    # 한 번에 한 축을 따라 부피를 분할, 각 하위 단계에서 순환 방식으로 축을 변경하여 생성되는
+    # 하위 계층 구조를 나타냄
     nn = NearestNeighbors(n_neighbors=k_nn+1, algorithm='kd_tree').fit(xyz)
     distances, neighbors = nn.kneighbors(xyz)
     neighbors = neighbors[:, 1:]
@@ -34,10 +39,10 @@ def compute_graph_nn_2(xyz, k_nn1, k_nn2, voronoi = 0.0):
     nn = NearestNeighbors(n_neighbors=k_nn2+1, algorithm='kd_tree').fit(xyz)
     distances, neighbors = nn.kneighbors(xyz)
     del nn
-    neighbors = neighbors[:, 1:]
+    neighbors = neighbors[:, 1:]            # 첫번째 열을 제외한 나머지 요소를 저장
     distances = distances[:, 1:]
     #---knn2---
-    target2 = (neighbors.flatten()).astype('uint32')
+    target2 = (neighbors.flatten()).astype('uint32') # 위에서 구한 배열을 1차원 배열로 변환
     #---knn1-----
     if voronoi>0:
         tri = Delaunay(xyz)
