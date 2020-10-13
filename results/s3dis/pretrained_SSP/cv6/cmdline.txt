@@ -1,0 +1,1 @@
+'./learning/main.py' --dataset 's3dis' --S3DIS_PATH 'datasets/s3dis' --batch_size '5' --cvfold '6' --epochs -1 --lr_steps '[150,200]' --model_config 'gru_10_0,f_13' --ptn_nfeat_stn '10' --nworkers '2' --spg_augm_order '5' --pc_attribs 'xyzXYZrgbe' --spg_augm_hardcutoff '768' --ptn_minpts '50' --use_val_set '1' --odir 'results/s3dis/pretrained_SSP/cv6' --resume 'RESUME'

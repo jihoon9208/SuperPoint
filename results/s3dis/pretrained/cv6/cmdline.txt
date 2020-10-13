@@ -1,0 +1,1 @@
+'learning/main.py' --dataset 's3dis' --S3DIS_PATH 'datasets/s3dis' --cvfold '6' --epochs -1 --lr_steps '[275,320]' --test_nth_epoch '50' --model_config 'gru_10_0,f_13' --ptn_nfeat_stn '14' --nworkers '2' --pc_attribs 'xyzrgbelpsvXYZ' --odir 'results/s3dis/pretrained/cv6' --resume 'RESUME'
