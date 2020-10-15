@@ -460,7 +460,8 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
             ,lambda[0] * fabsf(v1[2]) + lambda[1] * fabsf(v2[2]) + lambda[2] * fabsf(v3[2])};
         float norm = sqrt(unary_vector[0] * unary_vector[0] + unary_vector[1] * unary_vector[1]             // 단항 벡터의 길이를 구함
                         + unary_vector[2] * unary_vector[2])
-        float verticality = unary_vector[2] / norm;                                                         // 단항 벡터의 마지막 요소와 단항 벡터의 길이로 나누면 
+        float verticality = unary_vector[2] / norm;                                                         // 크기로 나누어 수직인지 아닌지를 판별 
+                                                                                                            // 수직인 경우 1, 평평한 경우 0, 비스듬히 누워 있는 경우 0.5라는 값을 가지게 된다.
         //---fill the geof vector---
         geof[i_ver][0] = linearity;
         geof[i_ver][1] = planarity;
