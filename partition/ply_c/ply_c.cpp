@@ -391,7 +391,7 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
     const float * xyz_data = reinterpret_cast<float*>(xyz.get_data());
     std::size_t s_ver = 0;
     #pragma omp parallel for schedule(static)       //지정된 스레드에 맞춰 스레드 생성
-    for (std::size_t i_ver = 0; i_ver < n_ver; i_ver++)
+    for (std::size_t i_ver = 0; i_ver < n_ver; i_ver++)                       // 한 점과 그 주변 점들을 하나의 position 행렬로 만든다.
     {//each point can be treated in parallell 
     
         //--- compute 3d covariance matrix of neighborhood ---
@@ -413,15 +413,13 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
         // PCA 주성분 분석, 데이터들을 정사영 시켜 차원을 낮춘다면 어떤 벡터에 데이터들을 정사영 시켜야 원래의 데이터 구조를 잘 유지할 수 있을까?
         // 이 때 고유 벡터를 사용한다. 고유 벡터는 방향은 바뀌지 않고, 크기만 변환시킴
         // compute the covariance matrix
-        ei::MatrixXf centered_position = position.rowwise() - position.colwise().mean();                // 중심점
-        ei::Matrix3f cov = (centered_position.adjoint() * centered_position) / float(k_nn + 1);         // 3차원 구조 tensor 
-                                                                                                        // 대칭 양의 정부호 행렬 - 실수인 고유값들을 가지는데, 그 고유값들이 모두 양수이다.
-                                                                                                        // rotation matrix * 람다 양의 정부호 행렬 * rotation matrix transpose
-                                                                                                        // 여기서 람다는 각각의 고유 벡터와 고유 값 행렬로 알려진 양의 정부호 대각선 행렬이다.
-        ei::EigenSolver<Matrix3f> es(cov);                                                              // eigenvector, eigenvalue를 구한다. 
-                                                                                                    
+        ei::MatrixXf centered_position = position.rowwise() - position.colwise().mean();                // 만든 position 행렬의 평균을 0으로 만든다. 중심점을 찾는것
+        ei::Matrix3f cov = (centered_position.adjoint() * centered_position) / float(k_nn + 1);         // 공분산 행렬
+                                                                                                     
+        ei::EigenSolver<Matrix3f> es(cov);                                                              // 공분산 행렬의 고유값과 고유벡터를 구할 수 있다.
+                                                                                                        
         //--- compute the eigen values and vectors---
-        std::vector<float> ev = {es.eigenvalues()[0].real(),es.eigenvalues()[1].real(),es.eigenvalues()[2].real()};         // 계산된 고유값 벡터
+        std::vector<float> ev = {es.eigenvalues()[0].real(),es.eigenvalues()[1].real(),es.eigenvalues()[2].real()};         // 계산된 고유값을 벡터로
         std::vector<int> indices(3);        // 0으로 이루어진 3x1벡터
         std::size_t n(0);                   
         std::generate(std::begin(indices), std::end(indices), [&]{ return n++; });          // 벡터 indices에 0,1,2 들어간다.
@@ -430,8 +428,8 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
         std::vector<float> lambda = {(std::max(ev[indices[0]],0.f)),                        // ev[] -> 고유값이 제일 큰 순서대로 들어가게 된다.
                                     (std::max(ev[indices[1]],0.f)),                         //     
                                     (std::max(ev[indices[2]],0.f))};
-        std::vector<float> v1 = {es.eigenvectors().col(indices[0])(0).real()                // 선형 변환의 주축
-                               , es.eigenvectors().col(indices[0])(1).real()                // 선형 변환시 크기만 바뀌고 방향은 바뀌지 않는 벡터가 eigenvector
+        std::vector<float> v1 = {es.eigenvectors().col(indices[0])(0).real()                // 
+                               , es.eigenvectors().col(indices[0])(1).real()                // 
                                , es.eigenvectors().col(indices[0])(2).real()};              
         std::vector<float> v2 = {es.eigenvectors().col(indices[1])(0).real()
                                , es.eigenvectors().col(indices[1])(1).real()
@@ -440,9 +438,9 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
                                , es.eigenvectors().col(indices[2])(1).real()
                                , es.eigenvectors().col(indices[2])(2).real()};
         //--- compute the dimensionality features---
-        float linearity  = (sqrtf(lambda[0]) - sqrtf(lambda[1])) / sqrtf(lambda[0]);                        //
-        float planarity  = (sqrtf(lambda[1]) - sqrtf(lambda[2])) / sqrtf(lambda[0]);                        //
-        float scattering =  sqrtf(lambda[2]) / sqrtf(lambda[0]);                                            //
+        float linearity  = (sqrtf(lambda[0]) - sqrtf(lambda[1])) / sqrtf(lambda[0]);                        // lambda[0] ------>>1 =2 길쭉해짐, 
+        float planarity  = (sqrtf(lambda[1]) - sqrtf(lambda[2])) / sqrtf(lambda[0]);                        // lambda[0] = lambda[1] ---->> 평면
+        float scattering =  sqrtf(lambda[2]) / sqrtf(lambda[0]);                                            // 0=1=2-----------------> 구형
         //--- compute the verticality feature---    
         std::vector<float> unary_vector =                                                       
             {lambda[0] * fabsf(v1[0]) + lambda[1] * fabsf(v2[0]) + lambda[2] * fabsf(v3[0])                 // 단항 벡터를 고유 값에 의해 가중치가 부여된 고유벡터 좌표의 절대 값 합계로 정의
