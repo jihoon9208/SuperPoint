@@ -412,9 +412,18 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
         }
         // PCA 주성분 분석, 데이터들을 정사영 시켜 차원을 낮춘다면 어떤 벡터에 데이터들을 정사영 시켜야 원래의 데이터 구조를 잘 유지할 수 있을까?
         // 이 때 고유 벡터를 사용한다. 고유 벡터는 방향은 바뀌지 않고, 크기만 변환시킴
+        // 고유 vector(eigenvector)의 의미를 잘 생각해보면, 
+        // 고유 벡터는 그 행렬이 벡터에 작용하는 주축(principal axis)의 방향을 나타내므로 
+        // 공분산 행렬의 고유 벡터는 데이터가 어떤 방향으로 분산되어 있는지를 나타내준다고 할 수 있다.
+
+        // 고유 값은 고유벡터 방향으로 얼마만큼의 크기로 벡터공간이 늘려지는 지를 얘기한다. 
+        // 따라서 고유 값이 큰 순서대로 고유 벡터를 정렬하면 결과적으로 중요한 순서대로 주성분을 구하는 것이 된다. 
+        
         // compute the covariance matrix
-        ei::MatrixXf centered_position = position.rowwise() - position.colwise().mean();                // 만든 position 행렬의 평균을 0으로 만든다. 중심점을 찾는것
-        ei::Matrix3f cov = (centered_position.adjoint() * centered_position) / float(k_nn + 1);         // 공분산 행렬
+        ei::MatrixXf centered_position = position.rowwise() - position.colwise().mean();                // 만든 데이터의 열들의 평균값을 0으로 만들기 위해 열들의 평균을 데이터 행렬에서 뺀다.
+                                                                                                        // 이렇게 하는 이유는 데이터 분포의 중심을 중심축으로 움직이는 벡터를 찾는데 도움을 주기 때문이다.
+        
+        ei::Matrix3f cov = (centered_position.adjoint() * centered_position) / float(k_nn + 1);         // 분자 : 각 데이터 특징들이 얼마나 닮아 있는가를 의미, 분모 : 데이터의 샘플수 만큼 나누어 준다. 공분산 행렬
                                                                                                      
         ei::EigenSolver<Matrix3f> es(cov);                                                              // 공분산 행렬의 고유값과 고유벡터를 구할 수 있다.
                                                                                                         
@@ -423,13 +432,13 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
         std::vector<int> indices(3);        // 0으로 이루어진 3x1벡터
         std::size_t n(0);                   
         std::generate(std::begin(indices), std::end(indices), [&]{ return n++; });          // 벡터 indices에 0,1,2 들어간다.
-        std::sort(std::begin(indices),std::end(indices),                                    // 고유 값 크기에 따라 내림차순으로 indices 값들(ev의 인덱스)의 위치가 정해진다.
-                       [&](int i1, int i2) { return ev[i1] > ev[i2]; } );
-        std::vector<float> lambda = {(std::max(ev[indices[0]],0.f)),                        // ev[] -> 고유값이 제일 큰 순서대로 들어가게 된다.
-                                    (std::max(ev[indices[1]],0.f)),                         //     
+        std::sort(std::begin(indices),std::end(indices),                                    // 고유 값이 큰 순서대로 고유 벡터를 정렬하면 결과적으로 중요한 순서대로 주성분을 구하는 것이 된다.
+                       [&](int i1, int i2) { return ev[i1] > ev[i2]; } );                   
+        std::vector<float> lambda = {(std::max(ev[indices[0]],0.f)),                        // 람다는 고유 벡터를 통해 정사영했을 때의 분산을 의미함 랑그라주 승수법에 의해
+                                    (std::max(ev[indices[1]],0.f)),                         
                                     (std::max(ev[indices[2]],0.f))};
-        std::vector<float> v1 = {es.eigenvectors().col(indices[0])(0).real()                // 
-                               , es.eigenvectors().col(indices[0])(1).real()                // 
+        std::vector<float> v1 = {es.eigenvectors().col(indices[0])(0).real()                // 각 고유값에 해당하는 고유 벡터
+                               , es.eigenvectors().col(indices[0])(1).real()                
                                , es.eigenvectors().col(indices[0])(2).real()};              
         std::vector<float> v2 = {es.eigenvectors().col(indices[1])(0).real()
                                , es.eigenvectors().col(indices[1])(1).real()
@@ -437,16 +446,19 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
         std::vector<float> v3 = {es.eigenvectors().col(indices[2])(0).real()
                                , es.eigenvectors().col(indices[2])(1).real()
                                , es.eigenvectors().col(indices[2])(2).real()};
-        //--- compute the dimensionality features---
-        float linearity  = (sqrtf(lambda[0]) - sqrtf(lambda[1])) / sqrtf(lambda[0]);                        // lambda[0] ------>>1 =2 길쭉해짐, 
-        float planarity  = (sqrtf(lambda[1]) - sqrtf(lambda[2])) / sqrtf(lambda[0]);                        // lambda[0] = lambda[1] ---->> 평면
-        float scattering =  sqrtf(lambda[2]) / sqrtf(lambda[0]);                                            // 0=1=2-----------------> 구형
+        // --- compute the dimensionality features---
+        // 첫번째 주축 고유 값인 l0 ------->>l1=l2 일 때, linearity을 의미
+        // l0 = l1 --------->> l2 일 때, 첫번째, 두번째가 같을 때, planarity을 의미
+        // l0 = l1 = l2 일 떄, scatter 즉 Sphericity 구형 
+        float linearity  = (sqrtf(lambda[0]) - sqrtf(lambda[1])) / sqrtf(lambda[0]);                        // l0 가 큰값인데, l1과 비교하여 얼마나 길쭉하게 되어 있는가                                                                                                        
+        float planarity  = (sqrtf(lambda[1]) - sqrtf(lambda[2])) / sqrtf(lambda[0]);                        // l1과 l2를 비교하여 얼마나 평면하지
+        float scattering =  sqrtf(lambda[2]) / sqrtf(lambda[0]);                                            // l3 비교하여 얼마나 퍼져있는지
         //--- compute the verticality feature---    
         std::vector<float> unary_vector =                                                       
             {lambda[0] * fabsf(v1[0]) + lambda[1] * fabsf(v2[0]) + lambda[2] * fabsf(v3[0])                 // 단항 벡터를 고유 값에 의해 가중치가 부여된 고유벡터 좌표의 절대 값 합계로 정의
             ,lambda[0] * fabsf(v1[1]) + lambda[1] * fabsf(v2[1]) + lambda[2] * fabsf(v3[1])                 // 단항 벡터의 vertical component는 이웃하는 점들의 verticality를 특징화한다.
             ,lambda[0] * fabsf(v1[2]) + lambda[1] * fabsf(v2[2]) + lambda[2] * fabsf(v3[2])};
-        float norm = sqrt(unary_vector[0] * unary_vector[0] + unary_vector[1] * unary_vector[1]             // 단항 벡터의 노름 즉 길이를 구함
+        float norm = sqrt(unary_vector[0] * unary_vector[0] + unary_vector[1] * unary_vector[1]             // 단항 벡터의 길이를 구함
                         + unary_vector[2] * unary_vector[2])
         float verticality = unary_vector[2] / norm;                                                         // 단항 벡터의 마지막 요소와 단항 벡터의 길이로 나누면 
         //---fill the geof vector---
