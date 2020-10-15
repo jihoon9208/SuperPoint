@@ -156,6 +156,7 @@ for folder in folders:
             # target_fea : kd_tree로 구한 neighbors의 1차원 배열 값
             #---compute geometric features-------
             geof = libply_c.compute_geof(xyz, target_fea, args.k_nn_geof).astype('float32')
+            
             end = timer()
             times[0] = times[0] + end - start
             del target_fea

@@ -18,7 +18,12 @@ def compute_graph_nn(xyz, k_nn):
     # 한 번에 한 축을 따라 부피를 분할, 각 하위 단계에서 순환 방식으로 축을 변경하여 생성되는
     # 하위 계층 구조를 나타냄
     nn = NearestNeighbors(n_neighbors=k_nn+1, algorithm='kd_tree').fit(xyz)
-    distances, neighbors = nn.kneighbors(xyz)
+    # xyz을 트레이닝 데이터로 사용하여 모델을 fit한다. 일종의 비교대상?
+
+    # 인접 영역까지의 거리를 계산하는데 사용되는 매트릭 -> 행렬
+    # 인접 네트워크까지의 거리를 계산하는데 사용되는 매트릭의 파라미터 -> 행렬 파라미터
+    distances, neighbors = nn.kneighbors(xyz)       # 점의 인접점을 찾는다. 리턴값으로 길이 대 점을 나타내는 배열
+                                                    # 모집단 행렬에서 가장 가까운 점의 Indices 즉 실제 데이터와 가장 가까운 점의 Indices
     neighbors = neighbors[:, 1:]
     distances = distances[:, 1:]
     source = np.matlib.repmat(range(0, num_ver), k_nn, 1).flatten(order='F')
