@@ -390,21 +390,21 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
     const uint32_t * target_data = reinterpret_cast<uint32_t*>(target.get_data());          // 
     const float * xyz_data = reinterpret_cast<float*>(xyz.get_data());
     std::size_t s_ver = 0;
-    #pragma omp parallel for schedule(static)       //지정된 스레드에 맞춰 스레드 생성
-    for (std::size_t i_ver = 0; i_ver < n_ver; i_ver++)                       // 한 점과 그 주변 점들을 하나의 position 행렬로 만든다.
+    #pragma omp parallel for schedule(static)                                               // 지정된 스레드에 맞춰 스레드 생성
+    for (std::size_t i_ver = 0; i_ver < n_ver; i_ver++)                                     // 점 A와 그 주변 점들(총 46개)을 하나의 position 행렬로 만든다.
     {//each point can be treated in parallell 
     
         //--- compute 3d covariance matrix of neighborhood ---
-        ei::MatrixXf position(k_nn+1,3);                        // 46 x 3 매트릭스 생성
+        ei::MatrixXf position(k_nn+1,3);                        // 46 x 3 매트릭스 생성 
         std::size_t i_edg = k_nn * i_ver;                       // 45 * i_ver 개씩  
         std::size_t ind_nei;                                    
-        position(0,0) = xyz_data[3 * i_ver];                    // x의 데이터 
-        position(0,1) = xyz_data[3 * i_ver + 1];                // y의 데이터 
-        position(0,2) = xyz_data[3 * i_ver + 2];                // z의 데이터 
+        position(0,0) = xyz_data[3 * i_ver];                    // 점 A의 x 데이터 
+        position(0,1) = xyz_data[3 * i_ver + 1];                // y 데이터 
+        position(0,2) = xyz_data[3 * i_ver + 2];                // z 데이터 
         for (std::size_t i_nei = 0; i_nei < k_nn; i_nei++)      // 
         {
                 //add the neighbors to the position matrix
-            ind_nei = target_data[i_edg];                       // 이웃한 점들의 위치 45 * i_ver 
+            ind_nei = target_data[i_edg];                       // 점 A에 이웃한 점들의 위치 45 * i_ver 
             position(i_nei+1,0) = xyz_data[3 * ind_nei];        
             position(i_nei+1,1) = xyz_data[3 * ind_nei + 1];
             position(i_nei+1,2) = xyz_data[3 * ind_nei + 2];
@@ -432,7 +432,7 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
         std::vector<int> indices(3);        // 0으로 이루어진 3x1벡터
         std::size_t n(0);                   
         std::generate(std::begin(indices), std::end(indices), [&]{ return n++; });          // 벡터 indices에 0,1,2 들어간다.
-        std::sort(std::begin(indices),std::end(indices),                                    // 고유 값이 큰 순서대로 고유 벡터를 정렬하면 결과적으로 중요한 순서대로 주성분을 구하는 것이 된다.
+        std::sort(std::begin(indices),std::end(indices),                                    // 고유 값이 큰 순서대로 고유벡터를 정렬하면 결과적으로 중요한 순서대로 주성분을 구하는 것이 된다.
                        [&](int i1, int i2) { return ev[i1] > ev[i2]; } );                   
         std::vector<float> lambda = {(std::max(ev[indices[0]],0.f)),                        // 람다는 고유 벡터를 통해 정사영했을 때의 분산을 의미함 랑그라주 승수법에 의해
                                     (std::max(ev[indices[1]],0.f)),                         

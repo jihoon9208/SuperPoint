@@ -171,7 +171,9 @@ for folder in folders:
             #--- build the spg h5 file --
             start = timer()
             if args.dataset=='s3dis':
-                features = np.hstack((geof, rgb/255.)).astype('float32')#add rgb as a feature for partitioning
+                # partitioning한 특징의 행렬에 rgb 값 행렬을 오른쪽에 붙인다.
+                features = np.hstack((geof, rgb/255.)).astype('float32')
+                # 기하학 특성인 verticality의 중요도를 증가시킴
                 features[:,3] = 2. * features[:,3] #increase importance of verticality (heuristic)
             elif args.dataset=='sema3d':
                  features = geof
@@ -180,7 +182,8 @@ for folder in folders:
                 #choose here which features to use for the partition
                  features = geof
                  geof[:,3] = 2. * geof[:, 3]
-                
+            # minimal part의 edge 가중치를 결정하는 파라미터
+            # 입력 클라우드 전체를 normalized 
             graph_nn["edge_weight"] = np.array(1. / ( args.lambda_edge_weight + graph_nn["distances"] / np.mean(graph_nn["distances"])), dtype = 'float32')
             print("        minimal partition...")
             components, in_component = libcp.cutpursuit(features, graph_nn["source"], graph_nn["target"]
