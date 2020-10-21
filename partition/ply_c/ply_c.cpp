@@ -389,6 +389,7 @@ PyObject * compute_geof(const bpn::ndarray & xyz ,const bpn::ndarray & target, i
     //--- read numpy array data---
     const uint32_t * target_data = reinterpret_cast<uint32_t*>(target.get_data());          // 
     const float * xyz_data = reinterpret_cast<float*>(xyz.get_data());
+    print(xyz_data)
     std::size_t s_ver = 0;
     #pragma omp parallel for schedule(static)                                               // 지정된 스레드에 맞춰 스레드 생성
     for (std::size_t i_ver = 0; i_ver < n_ver; i_ver++)                                     // 점 A와 그 주변 점들(총 46개)을 하나의 position 행렬로 만든다.
