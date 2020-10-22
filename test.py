@@ -5,9 +5,10 @@ def range_value (x,y,z):
 
     return torch.sqrt(x*x + y*y + z*z)
 
-def point_position(xyz, target , iedg):
+def point_position(xyz, target , k_nn, iver):
     target_data = target
     xyz_data = xyz
+    iedg = k_nn * iver
     iedg_data = iedg + 44
     ind_nei = 0
     position = torch.zeros(3, dtype=float)
@@ -18,9 +19,10 @@ def point_position(xyz, target , iedg):
   
     return position 
 
-def neighboor_position(xyz,target, iedg):
+def neighboor_position(xyz, target, k_nn, iver):
     target_data = target
     xyz_data = xyz
+    iedg = k_nn * iver
     iedg_data = iedg
     position = torch.zeros(4,3, dtype=float)
     for i in range(0,4):
@@ -52,14 +54,12 @@ def compute_geof(xyz, target, k_nn):
         tmp_xyz[0] = xyz_data[iver][0]
         tmp_xyz[1] = xyz_data[iver][1]
         tmp_xyz[2] = xyz_data[iver][2]
-        end_position = point_position(xyz_data, target_data, iedg)
+        end_position = point_position(xyz_data, target_data, k_nn, iver)
         
-        neighboor_point = torch.zeros(4,3, dtype=float)
-        neighboor_point = neighboor_position(xyz_data, target_data, iedg)
         # each point range value
         xi_range = range_value(tmp_xyz[0], tmp_xyz[1], tmp_xyz[2])
         xk_range = range_value(end_position[0],end_position[1],end_position[2] )
-        
+
         weightk = compute_weight(xi_range, xk_range)
         for inei in range(0, k_nn):
             ind_nei = target_data[iedg]
@@ -70,7 +70,8 @@ def compute_geof(xyz, target, k_nn):
             
             iedg +=1
             inei +=1
-        
+        neighboor_point = torch.zeros(4,3, dtype=float)
+        neighboor_point = neighboor_position(xyz_data, target_data, k_nn, iver)
         four_normal = 0
         for i in range(0, 4):
             xj_range = range_value(neighboor_point[i][0],neighboor_point[i][1] ,neighboor_point[i][2])
