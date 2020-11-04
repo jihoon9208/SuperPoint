@@ -33,16 +33,16 @@ def get_datasets(args, test_seed_offset=0):
      #if args.db_test_name == 'test' then the test set is the evaluation set
      #otherwise it serves as valdiation set to select the best epoch
     
-    for n in range(1,7):
-        if n != args.cvfold:
-            path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, n)
-            for fname in sorted(os.listdir(path)):
-                if fname.endswith(".h5") and not (args.use_val_set and fname in valid_names):
+    #for n in range(1,7):
+    #   if n != args.cvfold:
+    path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, 5)
+    for fname in sorted(os.listdir(path)):
+        if fname.endswith(".h5") and not (args.use_val_set and fname in valid_names):
                     #training set
-                    trainlist.append(spg.spg_reader(args, path + fname, True))
-                if fname.endswith(".h5") and (args.use_val_set  and fname in valid_names):
+            trainlist.append(spg.spg_reader(args, path + fname, True))
+        if fname.endswith(".h5") and (args.use_val_set  and fname in valid_names):
                     #validation set
-                    validlist.append(spg.spg_reader(args, path + fname, True))
+            validlist.append(spg.spg_reader(args, path + fname, True))
     path = '{}/superpoint_graphs/Area_{:d}/'.format(args.S3DIS_PATH, args.cvfold)
     
     #evaluation set
@@ -102,7 +102,7 @@ def preprocess_pointclouds(args):
             pathD = '{}/features/Area_{:d}/'.format(S3DIS_PATH, n)
         pathC = '{}/superpoint_graphs/Area_{:d}/'.format(S3DIS_PATH, n)
         if not os.path.exists(pathP):
-            os.makedirs(pathP)
+            os.makedirs(pathP) 
         random.seed(n)
         
         for file in os.listdir(pathC):
